@@ -1,5 +1,4 @@
 import json
-import jwt
 from datetime import datetime, timedelta
 from django.conf import settings
 from django.core.cache import cache
@@ -9,6 +8,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from .app import JWTAuthentication
 from .serializers import ObtainTokenSerializer
+from django.views.decorators.http import require_http_methods
 User = get_user_model()
 @api_view(['POST'])
 @permission_classes([AllowAny])
@@ -59,11 +59,11 @@ def sign_in(request):
             },status=200)
     return JsonResponse({"error": serializer.errors}, status=400)
 @api_view(['POST'])
-@rerquie_http_methode(['POST'])
+@require_http_methods(['POST'])
 @permission_classes([AllowAny])
 def logout_view(request):
     try:
         logout(request)
         return JsonResponse({"message":'logout sucssesfully'},status=200)
     except AttributeError:
-        return("error")
+        return JsonResponse({"error":"user not "})

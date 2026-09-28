@@ -49,6 +49,9 @@ class JWTAuthentication(authentication.BaseAuthentication):
         if not user.is_active:
             raise AuthenticationFailed('User is inactive')
 
+        if not user.is_verified:
+            raise AuthenticationFailed('User is not verified')
+
         if user.token_revoked_at and issued_at <= int(user.token_revoked_at.timestamp()):
             raise AuthenticationFailed('Token has been revoked')
 

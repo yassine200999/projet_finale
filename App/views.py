@@ -1,15 +1,17 @@
 import json
-from datetime import datetime, timedelta
+from datetime import timedelta
 from django.conf import settings
 from django.core.cache import cache
 from django.contrib.auth import authenticate, login, logout, get_user_model
 from django.http import JsonResponse
+from django.utils import timezone
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from .app import JWTAuthentication
 from .serializers import ObtainTokenSerializer
 
 User = get_user_model()
+
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
@@ -19,7 +21,6 @@ def sign_in(request):
 
     if serializer.is_valid():
         user = User.objects.filter(email=data['email']).first()
-        # user = user_qs
 
         user_auth = authenticate(
             request,
@@ -56,7 +57,7 @@ def sign_in(request):
 
             cache.set('CurrentUser', current_user)
 
-            user.token_last_expired = datetime.now() + timedelta(
+            user.token_last_expired = timezone.now() + timedelta(
                 hours=settings.JWT_CONF['TOKEN_LIFETIME_HOURS']
             )
             user.save()

@@ -5,17 +5,12 @@ from rest_framework.exceptions import AuthenticationFailed
 import jwt
 from django.conf import settings
 from datetime import timedelta
-
 User = get_user_model()
-
-
 class JWTAuthentication(authentication.BaseAuthentication):
-
     def authenticate(self, request):
         jwt_token = self.get_the_token_from_header(
             request.META.get('HTTP_AUTHORIZATION')
         )
-
         if not jwt_token:
             return None
 
@@ -29,15 +24,11 @@ class JWTAuthentication(authentication.BaseAuthentication):
 
         except jwt.ExpiredSignatureError:
             raise AuthenticationFailed('Token has expired')
-
         except jwt.InvalidTokenError as e:
             raise AuthenticationFailed(f'Invalid token: {str(e)}')
-
         user_id = payload.get('user_identifier')
-
         if user_id is None:
             raise AuthenticationFailed('User identifier not found in JWT')
-
         try:
             user = User.objects.get(id=user_id)
         except User.DoesNotExist:

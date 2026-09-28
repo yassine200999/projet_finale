@@ -1,89 +1,89 @@
-import json
 from datetime import timedelta
+
 from django.conf import settings
 from django.core.cache import cache
-from django.contrib.auth import authenticate, login, logout, get_user_model
+from django.contrib.auth import authenticate
 from django.http import JsonResponse
 from django.utils import timezone
+
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
+
 from .app import JWTAuthentication
 from .serializers import ObtainTokenSerializer
-
-User = get_user_model()
 
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def sign_in(request):
-    data = json.loads(request.body)
-    serializer = ObtainTokenSerializer(data=data)
+    serializer = ObtainTokenSerializer(data=request.data)
 
-    if serializer.is_valid():
-        user = User.objects.filter(email=data['email']).first()
+    if not serializer.is_valid():
+        return JsonResponse({
+            'error': serializer.errors
+        }, status=400)
 
-        user_auth = authenticate(
-            request,
-            username=data['email'],
-            password=data['password']
-        )
+    email = serializer.validated_data['email']
+    password = serializer.validated_data['password']
 
-        if user and user_auth and not user.is_verified:
-            current_user = {
-                "id": user.id,
-                "username": user.first_name,
-                "email": user.email,
-                "is_verified": user.is_verified,
-                "is_admin": user.is_admin
-            }
+    user = authenticate(
+        request,
+        username=email,
+        password=password
+    )
 
-            return JsonResponse({
-                "error": "user is not verified",
-                "CurrentUser": current_user
-            }, status=400)
+    if user is None:
+        return JsonResponse({
+            'error': 'Invalid email or password'
+        }, status=401)
 
-        if user_auth:
-            login(request, user)
+    if not user.is_verified:
+        current_user = {
+            'id': user.id,
+            'username': user.first_name,
+            'email': user.email,
+            'is_verified': user.is_verified,
+            'is_admin': user.is_admin
+        }
 
-            jwt_token = str(JWTAuthentication.create_jwt(user))
+        return JsonResponse({
+            'error': 'user is not verified',
+            'CurrentUser': current_user
+        }, status=400)
 
-            current_user = {
-                "id": user.pk,
-                "username": user.first_name,
-                "email": user.email,
-                "is_verified": user.is_verified,
-                "is_admin": user.is_admin
-            }
+    jwt_token = str(JWTAuthentication.create_jwt(user))
 
-            cache.set('CurrentUser', current_user)
+    current_user = {
+        'id': user.pk,
+        'username': user.first_name,
+        'email': user.email,
+        'is_verified': user.is_verified,
+        'is_admin': user.is_admin
+    }
 
-            user.token_last_expired = timezone.now() + timedelta(
-                hours=settings.JWT_CONF['TOKEN_LIFETIME_HOURS']
-            )
-            user.save()
+    cache.set(f'CurrentUser:{user.pk}', current_user)
 
-            return JsonResponse({
-                "message": "login successfully",
-                "token": jwt_token,
-                "CurrentUser": current_user
-            }, status=200)
+    user.token_last_expired = timezone.now() + timedelta(
+        hours=settings.JWT_CONF.get('TOKEN_LIFETIME_HOURS', 1)
+    )
+    user.save(update_fields=['token_last_expired'])
 
     return JsonResponse({
-        "error": serializer.errors
-    }, status=400)
+        'message': 'login successfully',
+        'token': jwt_token,
+        'CurrentUser': current_user
+    }, status=200)
 
 
 @api_view(['POST'])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def logout_view(request):
-    try:
-        logout(request)
+    user = request.user
+    user.token_revoked_at = timezone.now()
+    user.save(update_fields=['token_revoked_at'])
 
-        return JsonResponse({
-            "message": "logout successfully"
-        }, status=200)
+    cache.delete(f'CurrentUser:{user.pk}')
 
-    except AttributeError:
-        return JsonResponse({
-            "error": "user not found"
-        }, status=400)
+    return JsonResponse({
+        'message': 'logout successfully'
+    }, status=200)

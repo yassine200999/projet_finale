@@ -1,9 +1,10 @@
 from django.contrib.auth import get_user_model
+from django.utils import timezone
 from rest_framework import authentication
 from rest_framework.exceptions import AuthenticationFailed
 import jwt
 from django.conf import settings
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 User = get_user_model()
 
@@ -22,8 +23,8 @@ class JWTAuthentication(authentication.BaseAuthentication):
             payload = jwt.decode(
                 jwt_token,
                 settings.SECRET_KEY,
-                algorithms=["HS256"],
-                audience=settings.JWT_CONF['JWT_AUDIENCE']
+                algorithms=[settings.JWT_CONF.get('ALGORITHM', 'HS256')],
+                audience=settings.JWT_CONF.get('JWT_AUDIENCE', 'my_app')
             )
 
         except jwt.ExpiredSignatureError:
@@ -35,9 +36,7 @@ class JWTAuthentication(authentication.BaseAuthentication):
         user_id = payload.get('user_identifier')
 
         if user_id is None:
-            raise AuthenticationFailed(
-                'User identifier not found in JWT'
-            )
+            raise AuthenticationFailed('User identifier not found in JWT')
 
         try:
             user = User.objects.get(id=user_id)
@@ -54,31 +53,34 @@ class JWTAuthentication(authentication.BaseAuthentication):
 
     @staticmethod
     def get_the_token_from_header(authorization_header):
-        if (
-            authorization_header
-            and authorization_header.lower().startswith('bearer ')
-        ):
-            return authorization_header.split(' ', 1)[1].strip()
+        if not authorization_header:
+            return None
+
+        parts = authorization_header.split()
+
+        if len(parts) == 2 and parts[0].lower() == 'bearer':
+            return parts[1]
 
         return None
 
-@staticmethod
-def create_jwt(user):
-    now = timezone.now()
-    payload = {
-        "user_identifier": user.id,
-        "exp": int((now + timedelta(
-            hours=settings.JWT_CONF['TOKEN_LIFETIME_HOURS']
-        )).timestamp()),
-        "iat": int(now.timestamp()),
-        "email": user.email,
-        "is_active": user.is_active,
-        "aud": settings.JWT_CONF.get("JWT_AUDIENCE", "my_app")
-    }
+    @staticmethod
+    def create_jwt(user):
+        now = timezone.now()
+        lifetime = settings.JWT_CONF.get('TOKEN_LIFETIME_HOURS', 1)
+        algorithm = settings.JWT_CONF.get('ALGORITHM', 'HS256')
+        audience = settings.JWT_CONF.get('JWT_AUDIENCE', 'my_app')
 
-    return jwt.encode(
-        payload,
-        settings.SECRET_KEY,
-        algorithm="HS256"
-    )
-    
+        payload = {
+            'user_identifier': user.id,
+            'exp': int((now + timedelta(hours=lifetime)).timestamp()),
+            'iat': int(now.timestamp()),
+            'email': user.email,
+            'is_active': user.is_active,
+            'aud': audience
+        }
+
+        return jwt.encode(
+            payload,
+            settings.SECRET_KEY,
+            algorithm=algorithm
+        )

@@ -6,12 +6,9 @@ import jwt
 from django.conf import settings
 from datetime import timedelta
 
-
 User = get_user_model()
 
-
 class JWTAuthentication(authentication.BaseAuthentication):
-
     def authenticate(self, request):
         jwt_token = self.get_the_token_from_header(
             request.META.get('HTTP_AUTHORIZATION')
@@ -32,14 +29,9 @@ class JWTAuthentication(authentication.BaseAuthentication):
         except jwt.InvalidTokenError as e:
             raise AuthenticationFailed(f'Invalid token: {str(e)}')
 
-        if payload.get('type') != 'access':
-            raise AuthenticationFailed('Invalid token type')
-
         user_id = payload.get('user_identifier')
-        issued_at = payload.get('iat')
-
-        if user_id is None or issued_at is None:
-            raise AuthenticationFailed('Invalid token payload')
+        if user_id is None:
+            raise AuthenticationFailed('User identifier not found in JWT')
 
         try:
             user = User.objects.get(id=user_id)
@@ -48,12 +40,6 @@ class JWTAuthentication(authentication.BaseAuthentication):
 
         if not user.is_active:
             raise AuthenticationFailed('User is inactive')
-
-        if not user.is_verified:
-            raise AuthenticationFailed('User is not verified')
-
-        if user.token_revoked_at and issued_at <= int(user.token_revoked_at.timestamp()):
-            raise AuthenticationFailed('Token has been revoked')
 
         return user, payload
 
@@ -85,8 +71,7 @@ class JWTAuthentication(authentication.BaseAuthentication):
             'iat': int(now.timestamp()),
             'email': user.email,
             'is_active': user.is_active,
-            'aud': audience,
-            'type': 'access'
+            'aud': audience
         }
 
         return jwt.encode(

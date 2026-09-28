@@ -1,8 +1,11 @@
 from pathlib import Path
+import os
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = 'django-insecure-7x4mQ2p9L6vN3kR8sT5wY1zC0aB4dE7fG9hJ2kM6pQ'
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY')
+if not SECRET_KEY:
+    raise RuntimeError('DJANGO_SECRET_KEY environment variable is required')
 DEBUG = True
 ALLOWED_HOSTS = []
 

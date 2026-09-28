@@ -3,41 +3,82 @@ from rest_framework import authentication
 from rest_framework.exceptions import AuthenticationFailed
 import jwt
 from django.conf import settings
-from datetime import datetime,timedelta
-User= get_user_model()
+from datetime import datetime, timedelta
+
+User = get_user_model()
+
+
 class JWTAuthentication(authentication.BaseAuthentication):
-    def authhentiale(self,request):
-        jwt_token=self.get_the_token_from_header(request.MTA.get('HTTP_AUTHORIZATION'))
+
+    def authenticate(self, request):
+        jwt_token = self.get_the_token_from_header(
+            request.META.get('HTTP_AUTHORIZATION')
+        )
+
         if not jwt_token:
             return None
+
         try:
-            paylod =jwt.decode(jwt_token, settings.SECRET_KEY, algorithms=["H5256"],audience=settings.JWT_CONF['JWT_CONF'])
+            payload = jwt.decode(
+                jwt_token,
+                settings.SECRET_KEY,
+                algorithms=["HS256"],
+                audience=settings.JWT_CONF['JWT_AUDIENCE']
+            )
+
         except jwt.ExpiredSignatureError:
-            return AuthenticationFailed('Token has expired')
+            raise AuthenticationFailed('Token has expired')
+
         except jwt.InvalidTokenError as e:
-            raise AuthenticationFailed(f'INvailed token:{str(e)}')
-        user_id=paylod.get('user_identifier')
+            raise AuthenticationFailed(f'Invalid token: {str(e)}')
+
+        user_id = payload.get('user_identifier')
+
         if user_id is None:
-            raise AuthenticationFailed(f"usser identifier not found in JWT")
-        user=User.objects.filter(id=user_id)
-        return user,paylod
+            raise AuthenticationFailed(
+                'User identifier not found in JWT'
+            )
+
+        try:
+            user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            raise AuthenticationFailed('User not found')
+
+        if not user.is_active:
+            raise AuthenticationFailed('User is inactive')
+
+        return user, payload
+
     def authenticate_header(self, request):
         return 'Bearer'
+
     @staticmethod
     def get_the_token_from_header(authorization_header):
-        if authorization_header and authorization_header.lower().startswith():
-            return authorization_header.split(' ',1)[1].strip()
+        if (
+            authorization_header
+            and authorization_header.lower().startswith('bearer ')
+        ):
+            return authorization_header.split(' ', 1)[1].strip()
+
         return None
-    @staticmethod
-    def create_jwt(user):
-        payload={
-            "user_identifier":user.id,
-            "exp":int((datetime.now() + timedelta(hours=settings.JWT_CONF['TOKEN_LIFETUME_HOURS'])).timestamp()),
-            "iat":datetime.now().timestamp(),
-            "email":user.email,
-            "is_active":user.is_active
-        }
-        payload['aud']=settings.JWT_CONF.get("JWT_AUDIENCE",'mu_app')
-        jwt_token = jwt.encode(payload, settings.SECRET_KEY, algorithm="HS256")
-        return jwt_token
+
+@staticmethod
+def create_jwt(user):
+    now = timezone.now()
+    payload = {
+        "user_identifier": user.id,
+        "exp": int((now + timedelta(
+            hours=settings.JWT_CONF['TOKEN_LIFETIME_HOURS']
+        )).timestamp()),
+        "iat": int(now.timestamp()),
+        "email": user.email,
+        "is_active": user.is_active,
+        "aud": settings.JWT_CONF.get("JWT_AUDIENCE", "my_app")
+    }
+
+    return jwt.encode(
+        payload,
+        settings.SECRET_KEY,
+        algorithm="HS256"
+    )
     

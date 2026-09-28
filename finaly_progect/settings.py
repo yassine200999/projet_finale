@@ -34,10 +34,12 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'rest_framework',
+    'category',
     'App',
     'users',
 ]
-
+AUTH_USER_MODEL = 'users.User'
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -125,7 +127,8 @@ STATIC_URL = 'static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 JWT_CONF ={
-    'TOKEN_LIFETUME_HOURS':1,
+    'TOKEN_LIFETIME_HOURS': 1,
+    'ALGORITHM': 'HS256',
     'REFRESH_TOKEN_LIFETUME':15,
     'ROTATE_REFRESH_TOKEN':True,
     'BLACKLIST_AFTER_ROTATION':True,
@@ -135,10 +138,9 @@ JWT_CONF ={
 AUTHENTICATION_BACKENS ={
     'django.contrib.auth.backends.ModelBackend'
 }
-AUTH_USER_MODEL="users.User"
 REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES':[
-        'rest_framework.authentication.TokenAuthentication'
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'App.app.JWTAuthentication',
     ],
     'DEFAULT_PERMISSION_CLASSES':[
         'rest_framework.permissions.IsAuthenticated'

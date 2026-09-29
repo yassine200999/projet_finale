@@ -5,8 +5,8 @@ from django.core.cache import cache
 from django.contrib.auth import authenticate, login, logout, get_user_model
 from django.http import JsonResponse
 from django.utils import timezone
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import AllowAny
+from rest_framework.decorators import api_view, permission_classes, authentication_classes
+from rest_framework.permissions import AllowAny, IsAuthenticated
 
 from .app import JWTAuthentication
 from .serializers import ObtainTokenSerializer
@@ -72,8 +72,12 @@ def sign_in(request):
 
 
 @api_view(['POST'])
-@permission_classes([AllowAny])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
 def logout_view(request):
+    user = request.user
+    user.token_invalidated_at = timezone.now()
+    user.save(update_fields=['token_invalidated_at'])
     logout(request)
     cache.delete('CurrentUser')
     return JsonResponse({"message": "logout successfully"}, status=200)

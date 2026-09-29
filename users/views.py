@@ -1,6 +1,6 @@
 from users.models import User
 from rest_framework.response import Response
-from users.serializers import SignUpSerializer
+from users.seriliazer import SignUpSerializer,UpdateUserSerilaizer
 from django.contrib.auth.hashers import make_password
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.decorators import api_view, permission_classes, authentication_classes
@@ -22,3 +22,17 @@ def add_user(request):
         signin_up_serializer.save()
         return Response( {'message': 'account created'}, status=status.HTTP_201_CREATED)
     return Response(signin_up_serializer.errors,status=status.HTTP_400_BAD_REQUEST)
+@api_view(['POST'])
+@require_http_methods(['POST'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
+def update_user(request,pk):
+    try:
+        user=User.objects.get(id=pk)
+    except User.DoesNotExist:
+        return Response({"error":"user not found"},status=status.HTTP_404_NOT_FOUND)
+    serializer=UpdateUserSerilaizer(user,data=request.data,partial=True)
+    if serializer.is_valid():
+        serializer.save()
+        return Response({"message":"user update successfuly","data":serializer.data},status=status.HTTP_200_OK)
+    return Response({"error":serializer.errors},status=status.HTTP_400_RAD_REQUEST)

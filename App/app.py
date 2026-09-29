@@ -8,6 +8,7 @@ from datetime import timedelta
 
 User = get_user_model()
 
+
 class JWTAuthentication(authentication.BaseAuthentication):
     def authenticate(self, request):
         jwt_token = self.get_the_token_from_header(
@@ -40,6 +41,12 @@ class JWTAuthentication(authentication.BaseAuthentication):
 
         if not user.is_active:
             raise AuthenticationFailed('User is inactive')
+
+        invalidated_at = user.token_invalidated_at
+        token_issued_at = payload.get('iat')
+        if invalidated_at is not None and token_issued_at is not None:
+            if token_issued_at <= int(invalidated_at.timestamp()):
+                raise AuthenticationFailed('Token has been invalidated')
 
         return user, payload
 

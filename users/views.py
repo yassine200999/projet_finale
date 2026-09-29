@@ -1,38 +1,64 @@
 from users.models import User
 from rest_framework.response import Response
-from users.seriliazer import SignUpSerializer,UpdateUserSerilaizer
+from users.serializers import SignUpSerializer, UpdateUserSerilaizer
 from django.contrib.auth.hashers import make_password
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.decorators import api_view, permission_classes, authentication_classes
 from django.views.decorators.http import require_http_methods
 from rest_framework import status
-from authentication.authentication import JWTAuthentication
-from django.core import serializers
-import json
+from App.app import JWTAuthentication
 @api_view(['POST'])
 @require_http_methods(['POST'])
 @permission_classes([AllowAny])
-# @authentication_classes([JWTAuthentication])
-# @permission_classes([IsAuthenticated])
 def add_user(request):
-    data = request.data.copy()
-    data['password'] = make_password(data['password'])
-    signin_up_serializer = SignUpSerializer(data=data)
-    if signin_up_serializer.is_valid():
-        signin_up_serializer.save()
-        return Response( {'message': 'account created'}, status=status.HTTP_201_CREATED)
-    return Response(signin_up_serializer.errors,status=status.HTTP_400_BAD_REQUEST)
+    serializer = SignUpSerializer(data=request.data)
+
+    if serializer.is_valid():
+        serializer.save()
+        return Response(
+            {'message': 'account created'},
+            status=status.HTTP_201_CREATED
+        )
+
+    return Response(
+        serializer.errors,
+        status=status.HTTP_400_BAD_REQUEST
+    )
+    return Response(
+        signin_up_serializer.errors,
+        status=status.HTTP_400_BAD_REQUEST
+    )
+
 @api_view(['POST'])
 @require_http_methods(['POST'])
 @authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
-def update_user(request,pk):
+def update_user(request, pk):
     try:
-        user=User.objects.get(id=pk)
+        user = User.objects.get(id=pk)
     except User.DoesNotExist:
-        return Response({"error":"user not found"},status=status.HTTP_404_NOT_FOUND)
-    serializer=UpdateUserSerilaizer(user,data=request.data,partial=True)
+        return Response(
+            {"error": "user not found"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    serializer = UpdateUserSerilaizer(
+        user,
+        data=request.data,
+        partial=True
+    )
+
     if serializer.is_valid():
         serializer.save()
-        return Response({"message":"user update successfuly","data":serializer.data},status=status.HTTP_200_OK)
-    return Response({"error":serializer.errors},status=status.HTTP_400_RAD_REQUEST)
+        return Response(
+            {
+                "message": "user update successfuly",
+                "data": serializer.data
+            },
+            status=status.HTTP_200_OK
+        )
+
+    return Response(
+        {"error": serializer.errors},
+        status=status.HTTP_400_BAD_REQUEST
+    )

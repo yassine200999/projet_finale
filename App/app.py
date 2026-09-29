@@ -45,7 +45,7 @@ class JWTAuthentication(authentication.BaseAuthentication):
         invalidated_at = user.token_invalidated_at
         token_issued_at = payload.get('iat')
         if invalidated_at is not None and token_issued_at is not None:
-            if token_issued_at <= int(invalidated_at.timestamp()):
+            if float(token_issued_at) <= invalidated_at.timestamp():
                 raise AuthenticationFailed('Token has been invalidated')
 
         return user, payload
@@ -75,7 +75,7 @@ class JWTAuthentication(authentication.BaseAuthentication):
         payload = {
             'user_identifier': user.id,
             'exp': int((now + timedelta(hours=lifetime)).timestamp()),
-            'iat': int(now.timestamp()),
+            'iat': now.timestamp(),
             'email': user.email,
             'is_active': user.is_active,
             'aud': audience

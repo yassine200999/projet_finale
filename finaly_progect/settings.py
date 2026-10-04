@@ -17,6 +17,7 @@ INSTALLED_APPS = [
     'category',
     'App',
     'users',
+    'products',
 ]
 
 AUTH_USER_MODEL = 'users.User'
@@ -75,6 +76,8 @@ USE_I18N = True
 USE_TZ = True
 
 STATIC_URL = 'static/'
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 JWT_CONF = {

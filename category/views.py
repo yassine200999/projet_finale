@@ -52,7 +52,7 @@ def delete_category(request, pk):
     except Category.DoesNotExist:
         return Response({"error": "Category not found"}, status=status.HTTP_404_NOT_FOUND)
     category.delete()
-    return Response({"message": "Category deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
+    return Response({"message": "Category deleted successfully"}, status=status.HTTP_200_OK)
 # ///////////////subcategory///////////
 @api_view(['GET'])
 @require_http_methods(['GET'])
@@ -108,4 +108,4 @@ def delete_SubCategory(request, pk):
     except SubCategory.DoesNotExist:
         return Response({"error": "SubCategory not found"}, status=status.HTTP_404_NOT_FOUND)
     subcategory.delete()
-    return Response({"message": "SubCategory deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
+    return Response({"message": "SubCategory deleted successfully"}, status=status.HTTP_200_OK)

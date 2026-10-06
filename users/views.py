@@ -6,8 +6,9 @@ from rest_framework.decorators import api_view, permission_classes, authenticati
 from django.views.decorators.http import require_http_methods
 from rest_framework import status
 from App.app import JWTAuthentication
-from django.contrib.auth.hashers import check_password
-from django.contrib.auth.hashers import make_password
+from django.contrib.auth.hashers import check_password, make_password
+
+
 @api_view(['POST'])
 @require_http_methods(['POST'])
 @permission_classes([AllowAny])
@@ -35,7 +36,11 @@ def update_user(request, pk):
     try:
         user = User.objects.get(id=pk)
     except User.DoesNotExist:
-        return Response({"error": "user not found"},status=status.HTTP_404_NOT_FOUND)
+        return Response(
+            {"error": "user not found"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
     serializer = UpdateUserSerializer(
         user,
         data=request.data,
@@ -46,38 +51,81 @@ def update_user(request, pk):
         serializer.save()
         return Response(
             {
-                "message": "user update successfuly","data": serializer.data }, status=status.HTTP_200_OK
+                "message": "user update successfully",
+                "data": serializer.data
+            },
+            status=status.HTTP_200_OK
         )
-    return Response({"error": serializer.errors},status=status.HTTP_400_BAD_REQUEST)
+
+    return Response(
+        {"error": serializer.errors},
+        status=status.HTTP_400_BAD_REQUEST
+    )
+
+
 @api_view(['PUT'])
 @require_http_methods(['PUT'])
 @authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
-def toogle_user(request,user_id):
+def toogle_user(request, user_id):
     try:
-        user=User.objects.get(id=user_id)
+        user = User.objects.get(id=user_id)
     except User.DoesNotExist:
-        return Response({"error": "user not found"},status=status.HTTP_404_NOT_FOUND)
+        return Response(
+            {"error": "user not found"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
     user.is_active = not user.is_active
     user.save()
+
     return Response(
-            {"message": "user update successfuly"}, status=status.HTTP_200_OK)
+        {"message": "user updated successfully"},
+        status=status.HTTP_200_OK
+    )
+
+
 @api_view(['PUT'])
 @require_http_methods(['PUT'])
 @authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
-def change_password(request,user_id):
+def change_password(request, user_id):
     try:
-        user=User.objects.get(id=user_id)
+        user = User.objects.get(id=user_id)
     except User.DoesNotExist:
-            return Response({"error": "user not found"},status=status.HTTP_404_NOT_FOUND)
-    data=request.data
-    if check_password(data['current_passowrd'],user.password):
-        if data['new_password']==data['comfirm_password']:
-            user.password = make_password(data['new_password'])
-            user.save()
-            return Response({"message":"passworrd update successfuly"},status=status.HTTP_200_OK)
-        else:
-            return Response({"error":"password not confirm"},status=status.HTTP_404_NOT_FOUND)
-    else:
-            return Response({"error":"password not confirm"},status=status.HTTP_404_NOT_FOUND)
+        return Response(
+            {"error": "user not found"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    current_password = request.data.get('current_password')
+    new_password = request.data.get('new_password')
+    confirm_password = request.data.get('confirm_password')
+
+    if not current_password or not new_password or not confirm_password:
+        return Response(
+            {
+                "error": "current_password, new_password and confirm_password are required"
+            },
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    if not check_password(current_password, user.password):
+        return Response(
+            {"error": "Current password is incorrect"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    if new_password != confirm_password:
+        return Response(
+            {"error": "New passwords do not match"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    user.password = make_password(new_password)
+    user.save(update_fields=['password'])
+
+    return Response(
+        {"message": "Password updated successfully"},
+        status=status.HTTP_200_OK
+    )

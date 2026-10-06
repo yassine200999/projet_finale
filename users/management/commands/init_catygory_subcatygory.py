@@ -325,9 +325,9 @@ class Command(BaseCommand):
                 self.stdout.write(f'Category created: {category_name}')
     
             for subcategory_name in category_data['subcategories']:
-                subcategory, sub_created = SubCategory.objects.get_or_create(
+                subcategory, sub_created = SubCategory.objects.update_or_create(
                     name=subcategory_name,
-                    category=category
+                    defaults={'category': category}
                 )
     
                 if sub_created:

@@ -12,4 +12,6 @@ urlpatterns = [
         views.init_category_subcategory,
         name='init_category_subcategory'
     ),
+    path('search_products/', views.search_products, name='search_products'),
+    path('filter_products/', views.filter_products, name='filter_products'),
 ]

@@ -59,7 +59,7 @@ def get_all_products(request):
 @api_view(['GET'])
 @require_http_methods(["GET"])
 @authentication_classes([JWTAuthentication])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])
 def get_product(request, pk):
     try:
         product = Product.objects.prefetch_related('images', 'subcategory').get(pk=pk)

@@ -11,7 +11,7 @@ from rest_framework import status
 from .models import Product, Image
 from .serializers import ProductSerializer, ImageSerializer
 from App.app import JWTAuthentication
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 
 @api_view(['POST'])
 @require_http_methods(["POST"])
@@ -50,7 +50,7 @@ def create_product(request):
 @api_view(['GET'])
 @require_http_methods(["GET"])
 @authentication_classes([JWTAuthentication])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])
 def get_all_products(request):
     products = Product.objects.prefetch_related('images', 'subcategory').all()
     return Response(ProductSerializer(products, many=True).data, status=status.HTTP_200_OK)

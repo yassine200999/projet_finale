@@ -7,8 +7,26 @@ from django.views.decorators.http import require_http_methods
 from rest_framework import status
 from App.app import JWTAuthentication
 from django.contrib.auth.hashers import check_password, make_password
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_all_user(request):
+    users = User.objects.all()
 
+    data = [
+        {
+            'id': user.id,
+            'email': user.email,
+            'first_name': user.first_name,
+            'last_name': user.last_name,
+            'phone_number': user.phone_number,
+            'is_verified': user.is_verified,
+            'is_active': user.is_active,
+            'is_admin': user.is_admin,
+        }
+        for user in users
+    ]
 
+    return Response(data)
 @api_view(['POST'])
 @require_http_methods(['POST'])
 @permission_classes([AllowAny])
@@ -129,3 +147,17 @@ def change_password(request, user_id):
         {"message": "Password updated successfully"},
         status=status.HTTP_200_OK
     )
+@api_view(['DELETE'])
+@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
+def delete_product(request, pk):
+    product = Product.objects.get(pk=pk)
+
+    if product.user != request.user:
+        return Response(
+            {"error": "Permission denied"},
+            status=403
+        )
+
+    product.delete()
+    return Response({"message": "Deleted successfully"})

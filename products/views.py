@@ -121,8 +121,19 @@ def update_product(request, pk):
         return Response({"error": "Product not found"}, status=status.HTTP_404_NOT_FOUND)
     serializer = ProductSerializer(product, data=request.data, partial=request.method == 'PATCH')
     if serializer.is_valid():
-        serializer.save()
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        product = serializer.save()
+        images = request.FILES.getlist('images')
+        if images:
+            folder_path = os.path.join(settings.MEDIA_ROOT, 'product_images', str(product.pk))
+            os.makedirs(folder_path, exist_ok=True)
+            fs = FileSystemStorage(location=folder_path)
+            for image in images:
+                filename = fs.save(image.name, image)
+                image_url = os.path.join(
+                    settings.MEDIA_ROOT, 'product_images', str(product.pk), filename
+                ).replace("\\", "/")
+                Image.objects.create(image_url=image_url, product=product)
+        return Response(ProductSerializer(product).data, status=status.HTTP_200_OK)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
